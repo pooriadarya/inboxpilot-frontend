@@ -6,18 +6,29 @@
   <title>InboxPilot</title>
 <style>
   :root {
-    --ios-bg: #f2f2f7;
-    --ios-card: #ffffff;
-    --ios-primary: #007aff;
-    --ios-danger: #ff3b30;
-    --ios-secondary: #8e8e93;
+    --bg: #f2f2f7;
+    --card: #ffffff;
+    --text: #111;
+    --secondary: #8e8e93;
+    --danger: #ff3b30;
+    --accent: #007aff;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000;
+      --card: #1c1c1e;
+      --text: #ffffff;
+      --secondary: #a1a1a6;
+    }
   }
 
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Segoe UI", Roboto;
-    background: var(--ios-bg);
-    color: #111;
+    font-family: -apple-system, BlinkMacSystemFont, "San Francisco", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    transition: background 0.3s ease, color 0.3s ease;
   }
 
   .container {
@@ -29,69 +40,41 @@
   h1 {
     font-size: 28px;
     font-weight: 700;
-    margin-bottom: 4px;
   }
 
   #count {
-    color: var(--ios-secondary);
+    color: var(--secondary);
     font-size: 14px;
     margin-bottom: 16px;
   }
 
   .card {
-    background: var(--ios-card);
+    background: var(--card);
     border-radius: 16px;
     padding: 16px;
     margin-bottom: 12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    touch-action: pan-y;
   }
 
   .card:active {
     transform: scale(0.97);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
 
   .urgent {
-    color: var(--ios-danger);
+    color: var(--danger);
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.3px;
-    margin-bottom: 4px;
-  }
-
-  h3 {
-    margin: 6px 0;
-    font-size: 17px;
-    line-height: 1.3;
-  }
-
-  p {
-    font-size: 15px;
-    line-height: 1.4;
-  }
-
-  .priority {
-    font-size: 12px;
-    color: var(--ios-secondary);
-    margin-top: 8px;
   }
 
   button {
     background: none;
     border: none;
-    color: var(--ios-primary);
+    color: var(--accent);
     font-size: 16px;
     padding: 0;
-  }
-
-  ul {
-    padding-left: 18px;
-  }
-
-  li {
-    margin-bottom: 6px;
   }
 </style>
 </head>
@@ -103,62 +86,95 @@
   </div>
 
   <script>
-  document.body.style.transition = "opacity 0.2s ease";
   const API_URL = "https://inboxpilot-backend.onrender.com";
   const list = document.getElementById("list");
   const count = document.getElementById("count");
 
-  count.innerText = "Loading your focus…";
+  document.body.style.transition = "opacity 0.2s ease";
 
-  fetch(API_URL + "/focus")
-    .then(res => res.json())
-    .then(data => {
-      count.innerText =
-        data.items.length + " items need your attention today";
+  function haptic(type = "light") {
+    if (navigator.vibrate) {
+      navigator.vibrate(type === "light" ? 10 : 30);
+    }
+  }
 
-      list.innerHTML = "";
+  function loadData() {
+    count.innerText = "Refreshing…";
+    list.innerHTML = "";
 
-      data.items.forEach(item => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.onclick = () => showDetail(item);
+    fetch(API_URL + "/focus")
+      .then(res => res.json())
+      .then(data => {
+        count.innerText =
+          `📬 ${data.items.length} items need your attention today`;
 
-        card.innerHTML = `
-          <div class="urgent">${item.category.toUpperCase()}</div>
-          <h3>${item.subject}</h3>
-          <p style="color:#555;">${item.summary}</p>
-          <div class="priority">Priority: ${item.priority}</div>
-        `;
+        data.items.forEach(item => {
+          const card = document.createElement("div");
+          card.className = "card";
 
-        list.appendChild(card);
+          let startX = 0;
+          card.addEventListener("touchstart", e => {
+            startX = e.touches[0].clientX;
+          });
+
+          card.addEventListener("touchend", e => {
+            const diff = e.changedTouches[0].clientX - startX;
+            if (diff > 80) {
+              card.style.opacity = 0;
+              haptic("medium");
+              setTimeout(() => card.remove(), 150);
+            } else {
+              showDetail(item);
+            }
+          });
+
+          card.innerHTML = `
+            <div class="urgent">⏰ ${item.category.toUpperCase()}</div>
+            <h3>${item.subject}</h3>
+            <p style="color:var(--secondary);">${item.summary}</p>
+            <div style="font-size:12px;">⭐ Priority ${item.priority}</div>
+          `;
+
+          list.appendChild(card);
+        });
       });
-    })
-    .catch(err => {
-      count.innerText = "Could not load emails";
-      list.innerHTML = "<p>Please try again.</p>";
-      console.error(err);
-    });
+  }
 
   function showDetail(item) {
-  document.body.style.opacity = 0;
+    haptic();
+    document.body.style.opacity = 0;
 
-  setTimeout(() => {
-    document.body.innerHTML = `
-      <div class="container">
-        <button onclick="location.reload()">← Inbox</button>
-        <h2 style="margin-top:12px;">${item.subject}</h2>
-        <p style="color:#666;"><strong>From:</strong> ${item.sender}</p>
-        <p>${item.summary}</p>
+    setTimeout(() => {
+      document.body.innerHTML = `
+        <div class="container">
+          <button onclick="location.reload()">← Inbox</button>
+          <h2>${item.subject}</h2>
+          <p><strong>From:</strong> ${item.sender}</p>
+          <p>${item.summary}</p>
+          <h3>Suggested Actions</h3>
+          <ul>
+            ${item.actions.map(a => `<li>✅ ${a}</li>`).join("")}
+          </ul>
+        </div>
+      `;
+      document.body.style.opacity = 1;
+    }, 120);
+  }
 
-        <h3>Suggested Actions</h3>
-        <ul>
-          ${item.actions.map(a => `<li>${a}</li>`).join("")}
-        </ul>
-      </div>
-    `;
-    document.body.style.opacity = 1;
-  }, 120);
-}
+  // Pull to refresh
+  let startY = 0;
+  window.addEventListener("touchstart", e => {
+    startY = e.touches[0].clientY;
+  });
+
+  window.addEventListener("touchend", e => {
+    if (window.scrollY === 0 && e.changedTouches[0].clientY - startY > 100) {
+      haptic("medium");
+      loadData();
+    }
+  });
+
+  loadData();
 </script>
 </body>
 </html>
