@@ -112,21 +112,37 @@
           const card = document.createElement("div");
           card.className = "card";
 
-          let startX = 0;
-          card.addEventListener("touchstart", e => {
-            startX = e.touches[0].clientX;
-          });
+          // ✅ NEW iOS-style swipe logic
+let startX = 0;
+let moved = false;
 
-          card.addEventListener("touchend", e => {
-            const diff = e.changedTouches[0].clientX - startX;
-            if (diff > 80) {
-              card.style.opacity = 0;
-              haptic("medium");
-              setTimeout(() => card.remove(), 150);
-            } else {
-              showDetail(item);
-            }
-          });
+card.addEventListener("touchstart", e => {
+  startX = e.touches[0].clientX;
+  moved = false;
+  card.style.transition = "none";
+});
+
+card.addEventListener("touchmove", e => {
+  const diff = e.touches[0].clientX - startX;
+  if (diff > 0) {
+    card.style.transform = `translateX(${diff}px)`;
+    moved = true;
+  }
+});
+
+card.addEventListener("touchend", e => {
+  const diff = e.changedTouches[0].clientX - startX;
+  card.style.transition = "transform 0.2s ease";
+
+  if (diff > 120) {
+    card.style.transform = "translateX(120%)";
+    card.style.opacity = 0;
+    setTimeout(() => card.remove(), 200);
+  } else {
+    card.style.transform = "translateX(0)";
+    if (!moved) showDetail(item);
+  }
+});
 
           card.innerHTML = `
             <div class="urgent">⏰ ${item.category.toUpperCase()}</div>
