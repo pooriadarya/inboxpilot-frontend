@@ -43,27 +43,54 @@
   </div>
 
   <script>
-    const API_URL = "https://inboxpilot-backend.onrender.com";
+    <script>
+  const API_URL = "https://inboxpilot-backend.onrender.com";
+  const list = document.getElementById("list");
+  const count = document.getElementById("count");
 
-    fetch(API_URL + "/focus")
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("count").innerText =
-          data.items.length + " items need your attention today";
+  fetch(API_URL + "/focus")
+    .then(res => {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(data => {
+      count.innerText =
+        data.items.length + " items need your attention today";
 
-        const list = document.getElementById("list");
-        data.items.forEach(item => {
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <div class="urgent">${item.category.toUpperCase()}</div>
-            <h3>${item.subject}</h3>
-            <p>${item.summary}</p>
-            <div class="priority">Priority: ${item.priority}</div>
-          `;
-          list.appendChild(card);
-        });
+      data.items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.onclick = () => showDetail(item);
+
+        card.innerHTML = `
+          <div class="urgent">${item.category.toUpperCase()}</div>
+          <h3>${item.subject}</h3>
+          <div class="priority">Priority: ${item.priority}</div>
+        `;
+        list.appendChild(card);
       });
-  </script>
+    })
+    .catch(err => {
+      count.innerText = "Error loading emails";
+      list.innerHTML = `<p style="color:red;">${err}</p>`;
+      console.error(err);
+    });
+
+  function showDetail(item) {
+    document.body.innerHTML = `
+      <div class="container">
+        <button onclick="location.reload()">← Back</button>
+        <h2>${item.subject}</h2>
+        <p><strong>From:</strong> ${item.sender}</p>
+        <p>${item.summary}</p>
+
+        <h3>Suggested Actions</h3>
+        <ul>
+          ${item.actions.map(a => `<li>${a}</li>`).join("")}
+        </ul>
+      </div>
+    `;
+  }
+</script>
 </body>
 </html>
