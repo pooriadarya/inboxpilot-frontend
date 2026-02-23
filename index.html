@@ -103,6 +103,7 @@
   </div>
 
   <script>
+  document.body.style.transition = "opacity 0.2s ease";
   const API_URL = "https://inboxpilot-backend.onrender.com";
   const list = document.getElementById("list");
   const count = document.getElementById("count");
@@ -139,11 +140,14 @@
     });
 
   function showDetail(item) {
+  document.body.style.opacity = 0;
+
+  setTimeout(() => {
     document.body.innerHTML = `
       <div class="container">
-        <button onclick="location.reload()" style="margin-bottom:12px;">← Back</button>
-        <h2>${item.subject}</h2>
-        <p><strong>From:</strong> ${item.sender}</p>
+        <button onclick="location.reload()">← Inbox</button>
+        <h2 style="margin-top:12px;">${item.subject}</h2>
+        <p style="color:#666;"><strong>From:</strong> ${item.sender}</p>
         <p>${item.summary}</p>
 
         <h3>Suggested Actions</h3>
@@ -152,7 +156,9 @@
         </ul>
       </div>
     `;
-  }
+    document.body.style.opacity = 1;
+  }, 120);
+}
 </script>
 </body>
 </html>
