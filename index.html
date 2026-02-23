@@ -44,26 +44,55 @@
 
   <script>
   const API_URL = "https://inboxpilot-backend.onrender.com";
-  const count = document.getElementById("count");
   const list = document.getElementById("list");
+  const count = document.getElementById("count");
 
-  count.innerText = "Fetching from backend…";
+  count.innerText = "Loading your focus…";
 
   fetch(API_URL + "/focus")
     .then(res => res.json())
     .then(data => {
-      count.innerText = "SUCCESS: " + data.items.length + " items loaded";
+      count.innerText =
+        data.items.length + " items need your attention today";
 
-      list.innerHTML = `
-        <pre style="white-space:pre-wrap; font-size:12px;">
-${JSON.stringify(data, null, 2)}
-        </pre>
-      `;
+      list.innerHTML = "";
+
+      data.items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.onclick = () => showDetail(item);
+
+        card.innerHTML = `
+          <div class="urgent">${item.category.toUpperCase()}</div>
+          <h3>${item.subject}</h3>
+          <p style="color:#555;">${item.summary}</p>
+          <div class="priority">Priority: ${item.priority}</div>
+        `;
+
+        list.appendChild(card);
+      });
     })
     .catch(err => {
-      count.innerText = "FETCH FAILED";
-      list.innerHTML = `<p style="color:red;">${err}</p>`;
+      count.innerText = "Could not load emails";
+      list.innerHTML = "<p>Please try again.</p>";
+      console.error(err);
     });
+
+  function showDetail(item) {
+    document.body.innerHTML = `
+      <div class="container">
+        <button onclick="location.reload()" style="margin-bottom:12px;">← Back</button>
+        <h2>${item.subject}</h2>
+        <p><strong>From:</strong> ${item.sender}</p>
+        <p>${item.summary}</p>
+
+        <h3>Suggested Actions</h3>
+        <ul>
+          ${item.actions.map(a => `<li>${a}</li>`).join("")}
+        </ul>
+      </div>
+    `;
+  }
 </script>
 </body>
 </html>
